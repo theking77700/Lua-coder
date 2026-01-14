@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor Lua Avançado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px 20px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            margin: 10px;
+            gap: 10px;
+        }
+
+        .editor-panel {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-area {
+            flex: 1;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border: none;
+            outline: none;
+            resize: none;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            line-height: 1.6;
+        }
+
+        .output-area {
+            flex: 1;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background: #0d1117;
+            color: #58a6ff;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .output-area.error {
+            color: #ff7b72;
+        }
+
+        .templates {
+            display: flex;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+        }
+
+        .template-btn {
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .template-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .file-manager {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            min-width: 400px;
+        }
+
+        .file-manager.active {
+            display: block;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            display: none;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .file-item {
+            padding: 12px;
+            background: #f5f5f5;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .file-item:hover {
+            background: #e0e0e0;
+            transform: translateX(5px);
+        }
+
+        .file-item-name {
+            font-weight: bold;
+        }
+
+        .file-item-delete {
+            color: #ff4444;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .file-item-delete:hover {
+            background: #ffcccc;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .header-buttons {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            
+            .btn {
+                flex: 1;
+                min-width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <span>🌙</span> Editor Lua Avançado
+        </h1>
+        <div class="header-buttons">
+            <button class="btn btn-success" onclick="executeCode()">▶ Executar</button>
+            <button class="btn btn-primary" onclick="saveFile()">💾 Salvar</button>
+            <button class="btn btn-warning" onclick="loadFile()">📂 Abrir</button>
+            <button class="btn btn-info" onclick="clearAll()">🗑️ Limpar</button>
+        </div>
+    </div>
+
+    <div class="templates">
+        <button class="template-btn" onclick="loadTemplate('hello')">Hello World</button>
+        <button class="template-btn" onclick="loadTemplate('function')">Função</button>
+        <button class="template-btn" onclick="loadTemplate('table')">Tabela</button>
+        <button class="template-btn" onclick="loadTemplate('loop')">Loop</button>
+        <button class="template-btn" onclick="loadTemplate('class')">Classe</button>
+        <button class="template-btn" onclick="loadTemplate('game')">Game Loop</button>
+    </div>
+
+    <div class="container">
+        <div class="editor-panel">
+            <div class="panel-header">
+                <span>📝 Editor de Código</span>
+                <span id="lineCount">Linhas: 1</span>
+            </div>
+            <textarea class="code-area" id="codeEditor" placeholder="-- Escreva seu código Lua aqui..."></textarea>
+        </div>
+
+        <div class="editor-panel">
+            <div class="panel-header">
+                <span>📤 Saída</span>
+                <button class="btn btn-info" style="padding: 5px 15px; font-size: 12px;" onclick="clearOutput()">Limpar</button>
+            </div>
+            <div class="output-area" id="output">Aguardando execução...</div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="closeFileManager()"></div>
+    <div class="file-manager" id="fileManager">
+        <h2>Gerenciador de Arquivos</h2>
+        <input type="text" id="fileName" placeholder="Nome do arquivo (ex: script.lua)">
+        <div class="file-list" id="fileList"></div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-success" style="flex: 1;" onclick="confirmSave()">Salvar</button>
+            <button class="btn btn-warning" style="flex: 1;" onclick="closeFileManager()">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        const codeEditor = document.getElementById('codeEditor');
+        const output = document.getElementById('output');
+        const lineCount = document.getElementById('lineCount');
+
+        // Simula interpretador Lua básico
+        function executeLua(code) {
+            try {
+                let result = '';
+                const lines = code.split('\n');
+                const variables = {};
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    
+                    // Ignorar comentários e linhas vazias
+                    if (line.startsWith('--') || line === '') continue;
+                    
+                    // print()
+                    if (line.includes('print(')) {
+                        const match = line.match(/print\((.*?)\)/);
+                        if (match) {
+                            let content = match[1].trim();
+                            // Remove aspas
+                            content = content.replace(/^["']|["']$/g, '');
+                            // Substitui variáveis
+                            for (let [key, value] of Object.entries(variables)) {
+                                content = content.replace(new RegExp(key, 'g'), value);
+                            }
+                            // Avalia expressões simples
+                            try {
+                                content = content.replace(/\.\./g, '+');
+                                if (/^[\d\s+\-*/()\[\]]+$/.test(content)) {
+                                    content = eval(content);
+                                }
+                            } catch(e) {}
+                            result += content + '\n';
+                        }
+                    }
+                    
+                    // Variáveis simples
+                    if (line.includes('=') && !line.includes('==')) {
+                        const parts = line.split('=');
+                        if (parts.length === 2) {
+                            let varName = parts[0].replace('local', '').trim();
+                            let value = parts[1].trim().replace(/;$/, '');
+                            value = value.replace(/^["']|["']$/g, '');
+                            variables[varName] = value;
+                        }
+                    }
+                    
+                    // for loops simples
+                    if (line.startsWith('for ')) {
+                        const match = line.match(/for\s+(\w+)\s*=\s*(\d+)\s*,\s*(\d+)/);
+                        if (match) {
+                            const varName = match[1];
+                            const start = parseInt(match[2]);
+                            const end = parseInt(match[3]);
+                            for (let i = start; i <= end; i++) {
+                                variables[varName] = i;
+                            }
+                        }
+                    }
+                }
+                
+                return result || 'Código executado com sucesso!\n(Use print() para ver saídas)';
+            } catch (error) {
+                throw new Error('Erro na execução: ' + error.message);
+            }
+        }
+
+        function executeCode() {
+            const code = codeEditor.value;
+            output.classList.remove('error');
+            
+            if (!code.trim()) {
+                output.textContent = 'Digite algum código para executar!';
+                return;
+            }
+            
+            try {
+                const result = executeLua(code);
+                output.textContent = '✅ Executado com sucesso!\n\n' + result;
+            } catch (error) {
+                output.classList.add('error');
+                output.textContent = '❌ Erro:\n\n' + error.message;
+            }
+        }
+
+        function clearOutput() {
+            output.textContent = 'Aguardando execução...';
+            output.classList.remove('error');
+        }
+
+        function clearAll() {
+            if (confirm('Deseja limpar todo o código?')) {
+                codeEditor.value = '';
+                clearOutput();
+                updateLineCount();
+            }
+        }
+
+        function saveFile() {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('fileManager').classList.add('active');
+            document.getElementById('fileName').value = 'script.lua';
+            loadFileList();
+        }
+
+        function loadFile() {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('fileManager').classList.add('active');
+            document.getElementById('fileName').value = '';
+            loadFileList();
+        }
+
+        function closeFileManager() {
+            document.getElementById('overlay').classList.remove('active');
+            document.getElementById('fileManager').classList.remove('active');
+        }
+
+        function confirmSave() {
+            const fileName = document.getElementById('fileName').value;
+            if (!fileName) {
+                alert('Digite um nome para o arquivo!');
+                return;
+            }
+            
+            const files = JSON.parse(localStorage.getItem('luaFiles') || '{}');
+            files[fileName] = codeEditor.value;
+            localStorage.setItem('luaFiles', JSON.stringify(files));
+            
+            alert('Arquivo salvo: ' + fileName);
+            closeFileManager();
+        }
+
+        function loadFileList() {
+            const files = JSON.parse(localStorage.getItem('luaFiles') || '{}');
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            
+            for (let [name, content] of Object.entries(files)) {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span class="file-item-name">${name}</span>
+                    <span class="file-item-delete" onclick="deleteFile('${name}')">🗑️</span>
+                `;
+                item.onclick = (e) => {
+                    if (!e.target.classList.contains('file-item-delete')) {
+                        codeEditor.value = content;
+                        closeFileManager();
+                        updateLineCount();
+                    }
+                };
+                fileList.appendChild(item);
+            }
+            
+            if (Object.keys(files).length === 0) {
+                fileList.innerHTML = '<p style="text-align: center; color: #999;">Nenhum arquivo salvo</p>';
+            }
+        }
+
+        function deleteFile(fileName) {
+            if (confirm('Deseja deletar o arquivo: ' + fileName + '?')) {
+                const files = JSON.parse(localStorage.getItem('luaFiles') || '{}');
+                delete files[fileName];
+                localStorage.setItem('luaFiles', JSON.stringify(files));
+                loadFileList();
+            }
+        }
+
+        const templates = {
+            hello: `-- Hello World em Lua
+print("Hello, World!")
+print("Bem-vindo ao Editor Lua!")`,
+
+            function: `-- Exemplo de Função
+function soma(a, b)
+    return a + b
+end
+
+local resultado = soma(5, 3)
+print("Resultado: " .. resultado)`,
+
+            table: `-- Exemplo de Tabela
+local pessoa = {
+    nome = "João",
+    idade = 25,
+    cidade = "São Paulo"
+}
+
+print("Nome: " .. pessoa.nome)
+print("Idade: " .. pessoa.idade)`,
+
+            loop: `-- Exemplo de Loop
+for i = 1, 5 do
+    print("Contagem: " .. i)
+end
+
+local frutas = {"maçã", "banana", "laranja"}
+for i, fruta in ipairs(frutas) do
+    print(i .. ": " .. fruta)
+end`,
+
+            class: `-- Simulação de Classe
+Carro = {}
+Carro.__index = Carro
+
+function Carro:new(marca, modelo)
+    local self = setmetatable({}, Carro)
+    self.marca = marca
+    self.modelo = modelo
+    self.velocidade = 0
+    return self
+end
+
+function Carro:acelerar(valor)
+    self.velocidade = self.velocidade + valor
+    print(self.marca .. " acelerou para " .. self.velocidade .. " km/h")
+end
+
+local meuCarro = Carro:new("Toyota", "Corolla")
+meuCarro:acelerar(50)`,
+
+            game: `-- Loop de Jogo Simples
+local Player = {
+    x = 0,
+    y = 0,
+    vida = 100,
+    nome = "Jogador"
+}
+
+function Player:mover(dx, dy)
+    self.x = self.x + dx
+    self.y = self.y + dy
+    print(self.nome .. " moveu para (" .. self.x .. ", " .. self.y .. ")")
+end
+
+function Player:recebeDano(dano)
+    self.vida = self.vida - dano
+    print(self.nome .. " recebeu " .. dano .. " de dano. Vida: " .. self.vida)
+end
+
+-- Simular jogo
+print("=== Início do Jogo ===")
+Player:mover(10, 5)
+Player:mover(3, 7)
+Player:recebeDano(20)
+print("=== Fim do Jogo ===")`
+        };
+
+        function loadTemplate(name) {
+            if (templates[name]) {
+                codeEditor.value = templates[name];
+                updateLineCount();
+                clearOutput();
+            }
+        }
+
+        function updateLineCount() {
+            const lines = codeEditor.value.split('\n').length;
+            lineCount.textContent = 'Linhas: ' + lines;
+        }
+
+        codeEditor.addEventListener('input', updateLineCount);
+        
+        // Suporte para Tab
+        codeEditor.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+            }
+        });
+
+        // Carregar exemplo inicial
+        loadTemplate('hello');
+    </script>
+</body>
+  </html>
