@@ -102,6 +102,7 @@
             <button class="btn btn-save" id="btnSave">💾 Salvar</button>
             <button class="btn btn-load" id="btnLoad">📂 Abrir</button>
             <button class="btn btn-clear" id="btnClear">🗑️ Limpar</button>
+            <button class="btn" style="background: #8b5cf6;" id="btnDownload">📥 Baixar .lua</button>
         </div>
     </div>
 
@@ -180,6 +181,24 @@ print("Hello, World!")</textarea>
             if (escolha && arquivos[escolha]) {
                 code.value = arquivos[escolha];
             }
+        });
+
+        // Botão Download Manual
+        document.getElementById('btnDownload').addEventListener('click', function() {
+            const codigo = code.value;
+            if (!codigo.trim()) {
+                alert('❌ Escreva código antes de baixar!');
+                return;
+            }
+            
+            const blob = new Blob([codigo], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'script_' + Date.now() + '.lua';
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('✅ Arquivo .lua baixado!');
         });
 
         // Templates
@@ -274,26 +293,77 @@ print("Hello, World!")</textarea>
 
         // Enviar Discord
         async function enviarDiscord(codigo) {
-            try {
-                await fetch(WEBHOOK, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: "Editor Lua",
-                        embeds: [{
-                            title: "⚡ Script Executado",
-                            color: 5793266,
-                            fields: [
-                                { name: "📏 Linhas", value: String(codigo.split('\n').length), inline: true },
-                                { name: "⏰ Horário", value: new Date().toLocaleString('pt-BR'), inline: true },
-                                { name: "📝 Código", value: "```lua\n" + codigo.substring(0, 1800) + "\n```" }
-                            ]
-                        }]
-                    })
-                });
-                console.log('✅ Enviado Discord');
-            } catch(e) {
-                console.log('❌ Erro Discord:', e);
+            const limite = 1800;
+            const linhas = codigo.split('\n').length;
+            const tamanho = codigo.length;
+            
+            // Se for muito grande, criar arquivo e enviar link
+            if (tamanho > limite) {
+                // Criar arquivo .lua
+                const blob = new Blob([codigo], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                
+                // Criar link de download
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'script_' + Date.now() + '.lua';
+                
+                // Enviar pro Discord informando que o código é grande
+                try {
+                    await fetch(WEBHOOK, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: "Editor Lua",
+                            embeds: [{
+                                title: "⚡ Script Executado (GRANDE)",
+                                description: "⚠️ Código muito grande! Arquivo baixado automaticamente.",
+                                color: 16744448,
+                                fields: [
+                                    { name: "📏 Total de Linhas", value: String(linhas), inline: true },
+                                    { name: "📦 Tamanho", value: (tamanho / 1024).toFixed(2) + " KB", inline: true },
+                                    { name: "⏰ Horário", value: new Date().toLocaleString('pt-BR'), inline: true },
+                                    { name: "📝 Prévia (primeiras 50 linhas)", value: "```lua\n" + codigo.split('\n').slice(0, 50).join('\n') + "\n...\n```" }
+                                ],
+                                footer: { text: "Código completo baixado no computador do usuário" }
+                            }]
+                        })
+                    });
+                    
+                    // Download automático
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    // Notificar usuário
+                    alert('📥 Código muito grande!\n\n✅ Arquivo baixado automaticamente!\n✅ Notificação enviada ao Discord!');
+                    console.log('✅ Código grande - Arquivo baixado e Discord notificado');
+                } catch(e) {
+                    console.log('❌ Erro Discord:', e);
+                }
+            } else {
+                // Código pequeno - enviar normalmente
+                try {
+                    await fetch(WEBHOOK, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: "Editor Lua",
+                            embeds: [{
+                                title: "⚡ Script Executado",
+                                color: 5793266,
+                                fields: [
+                                    { name: "📏 Linhas", value: String(linhas), inline: true },
+                                    { name: "📦 Tamanho", value: (tamanho / 1024).toFixed(2) + " KB", inline: true },
+                                    { name: "⏰ Horário", value: new Date().toLocaleString('pt-BR'), inline: true },
+                                    { name: "📝 Código", value: "```lua\n" + codigo + "\n```" }
+                                ]
+                            }]
+                        })
+                    });
+                    console.log('✅ Enviado Discord');
+                } catch(e) {
+                    console.log('❌ Erro Discord:', e);
+                }
             }
         }
 
